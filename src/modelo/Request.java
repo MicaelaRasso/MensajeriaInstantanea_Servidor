@@ -1,11 +1,13 @@
 package modelo;
 
+import java.time.LocalDateTime;
+
 class Request {
     private String operacion;
 	private Usuario emisor;
     private Usuario receptor;
     private String contenido;
-    private String fechaYHora;
+    private LocalDateTime fechaYHora;
     
     
     public Request() {
@@ -51,12 +53,12 @@ class Request {
 	}
 
 
-	public String getFechaYHora() {
+	public LocalDateTime getFechaYHora() {
 		return fechaYHora;
 	}
 
 
-	public void setFechaYHora(String fechaYHora) {
+	public void setFechaYHora(LocalDateTime fechaYHora) {
 		this.fechaYHora = fechaYHora;
 	}
 
