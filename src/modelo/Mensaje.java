@@ -3,13 +3,13 @@ package modelo;
 import java.time.LocalDateTime;
 
 public class Mensaje {
-	private Usuario emisor;
-	private Usuario receptor;
+	private String emisor;
+	private String receptor;
 	private String contenido;
 	private LocalDateTime fechaYHora;
 
 
-	public Mensaje(Usuario emisor, Usuario receptor, String contenido,  LocalDateTime fechaYHora) {
+	public Mensaje(String emisor, String receptor, String contenido,  LocalDateTime fechaYHora) {
 		super();
 		this.emisor = emisor;
 		this.receptor = receptor;
@@ -25,11 +25,11 @@ public class Mensaje {
 		return fechaYHora;
 	}
 
-	public Usuario getEmisor() {
+	public String getEmisor() {
 		return emisor;
 	}
 
-	public Usuario getReceptor() {
+	public String getReceptor() {
 		return receptor;
 	}
 
@@ -41,7 +41,7 @@ public class Mensaje {
 	
 	public String paraMostrar() {
 		String salto = System.lineSeparator();
-		return emisor.getNombre() + ": " + salto + contenido + salto + fechaYHora;
+		return emisor + ": " + salto + contenido + salto + fechaYHora;
 	}
 
 }

@@ -86,5 +86,10 @@ public class Servidor {
 				e.printStackTrace();
 			}
 		}
+
+	public Usuario getReceptorPorNombre(String receptor) {
+	
+		return this.directorio.get(receptor);
+	}
 	
 	}
