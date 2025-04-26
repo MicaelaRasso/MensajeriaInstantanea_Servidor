@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.ArrayList;
 
 class Cliente extends Thread {
     private Socket socket;
@@ -41,11 +42,10 @@ class Cliente extends Thread {
     public void enviarMensaje(Request request, String mensajeJSON) {
         Usuario receptor = request.getReceptor();
         String nombreReceptor = receptor.getNombre();
-
         Cliente clienteReceptor = receptor.getCliente();
 
         if (clienteReceptor == null || clienteReceptor.out == null) {
-            // El receptor no tiene una conexión activa, almacenar mensaje
+            desconectarUsuario(receptor);
             receptor.getMensajesAlmacenados().add(new Mensaje(
                     request.getEmisor().getNombre(),
                     request.getReceptor().getNombre(),
@@ -54,12 +54,11 @@ class Cliente extends Thread {
             ));
             System.out.println("Receptor no conectado, mensaje almacenado.");
             return;
-        }
-
-        // Enviar el mensaje JSON al receptor
-        out.println(mensajeJSON);
-        out.flush();
-        System.out.println("Mensaje enviado a " + nombreReceptor);
+        } else {
+			clienteReceptor.out.println(mensajeJSON);
+	        clienteReceptor.out.flush();
+	        System.out.println("Mensaje enviado a " + nombreReceptor);
+		}       
     }
 
     private void cerrarConexion() {
@@ -72,4 +71,59 @@ class Cliente extends Thread {
             System.err.println("Error al cerrar la conexión");
         }
     }
+    
+    public void desconectarUsuario(Usuario receptor) {
+        receptor.setConectado(false);
+        receptor.setCliente(null);
+        System.out.println("Usuario desconectado: " + receptor.getNombre());
+    }
+    
+    public void reconectarUsuario(Usuario usuario, Cliente nuevoCliente) {
+        usuario.setConectado(true);
+        usuario.setCliente(nuevoCliente);
+        System.out.println("Usuario reconectado: " + usuario.getNombre());
+
+        // Enviar los mensajes almacenados
+        enviarMensajesAlmacenados(usuario);
+    }
+
+    public void enviarMensajesAlmacenados(Usuario usuario) {
+        ArrayList<Mensaje> mensajesPendientes = usuario.getMensajesAlmacenados();
+        
+        if (mensajesPendientes.isEmpty()) {
+            return;
+        }
+
+        PrintWriter out = usuario.getCliente().getOut();
+        if (out == null) {
+            System.out.println("No se puede enviar mensajes almacenados a " + usuario.getNombre() + " porque no tiene salida activa.");
+            return;
+        }
+
+        for (Mensaje mensaje : mensajesPendientes) {
+            Request request = new Request();
+            Usuario emisor = new Usuario();
+            emisor.setNombre(mensaje.getEmisor());
+
+            request.setOperacion("mensaje");
+            request.setEmisor(emisor);
+            request.setReceptor(usuario);
+            request.setContenido(mensaje.getContenido());
+            request.setFechaYHora(mensaje.getFechaYHora());
+
+            String mensajeJson = JsonConverter.toJson(request);
+            out.println(mensajeJson);
+            out.flush();
+        }
+
+        System.out.println("Se enviaron " + mensajesPendientes.size() + " mensajes almacenados a " + usuario.getNombre());
+
+        // Una vez enviados, vaciamos la lista
+        mensajesPendientes.clear();
+    }
+    
+    public PrintWriter getOut() {
+        return out;
+    }
+
 }

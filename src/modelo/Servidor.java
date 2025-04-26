@@ -64,12 +64,24 @@ public class Servidor {
     public void registrarUsuario(Usuario usuario, Socket socket) throws IOException {
         String nombreUsuario = usuario.getNombre();
         if (existeUsuario(nombreUsuario)) {
-            System.out.println("Nombre de usuario en uso: " + nombreUsuario);
-            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-            out.println("0"); // "0" significa que el nombre está en uso
-            socket.close();
-            return;
+            Usuario usuarioExistente = directorio.get(nombreUsuario);
+
+            if (!usuarioExistente.isConectado()) {
+                // El usuario existe pero estaba desconectado: lo reconectamos
+                Cliente nuevoCliente = new Cliente(socket, this);
+                nuevoCliente.reconectarUsuario(usuarioExistente, nuevoCliente);
+                nuevoCliente.start();
+                System.out.println("Usuario reconectado: " + nombreUsuario);
+            } else {
+                // El usuario ya estaba conectado: no permitimos conexión duplicada
+                System.out.println("Nombre de usuario en uso: " + nombreUsuario);
+                PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+                out.println("0"); // "0" significa que el nombre está en uso
+                socket.close();
+                return;
+            }
         } else {
+            // Usuario nuevo
             String ip = socket.getInetAddress().getHostAddress();
             int puertoCliente = socket.getPort();
             Cliente cliente = new Cliente(socket, this);
@@ -78,6 +90,7 @@ public class Servidor {
             cliente.start(); // Arranca el hilo del cliente
             System.out.println("Usuario registrado: " + nombreUsuario);
         }
+
     }
 
     public void consultarUsuario(String nombreUsuario) {
