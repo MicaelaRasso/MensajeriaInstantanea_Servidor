@@ -28,10 +28,6 @@ class Cliente extends Thread {
 
                 if (op.equals("mensaje")) {
                     this.enviarMensaje(request, mensaje);
-                } else if (op.equals("registro")) {
-                    // Aquí podrías manejar si recibieras un nuevo registro de usuario (opcional)
-                } else if (op.equals("consulta")) {
-                    // Aquí podrías manejar una consulta de usuarios (opcional)
                 }
             }
 
@@ -61,8 +57,8 @@ class Cliente extends Thread {
         }
 
         // Enviar el mensaje JSON al receptor
-        clienteReceptor.out.println(mensajeJSON);
-        clienteReceptor.out.flush();
+        out.println(mensajeJSON);
+        out.flush();
         System.out.println("Mensaje enviado a " + nombreReceptor);
     }
 
