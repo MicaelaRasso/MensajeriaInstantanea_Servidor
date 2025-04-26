@@ -92,4 +92,9 @@ public class Servidor {
 		return this.directorio.get(receptor);
 	}
 	
+	public Boolean existeUsuario(String nombreUsuario) {
+		
+		return this.directorio.containsKey(nombreUsuario);
 	}
+	
+}

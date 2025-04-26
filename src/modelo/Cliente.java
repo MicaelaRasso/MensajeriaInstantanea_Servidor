@@ -26,8 +26,16 @@ class Cliente extends Thread {
         	    String mensaje = in.readLine(); // Lee solo un mensaje
         	    if (mensaje != null && !"exit".equalsIgnoreCase(mensaje)) {
         	        //System.out.println("Recibiendo mensaje: " + message);
-        	        Mensaje msgObj = JsonAMensaje(mensaje);
-        	        this.enviarMensaje(msgObj,mensaje);
+        	        Request request = JsonConverter.fromJson(mensaje);
+        	        String op = request.getOperacion();
+        	        if(op.equals("mensaje")) {
+        	        	//crea un nuevo objeto mensaje
+        	        	this.enviarMensaje(request,mensaje); // <-- tendria que seleccionar el tipo de operacion
+        	        }else if(op.equals("registro")){
+        	        	//registra el usuario
+        	        }else if(op.equals("consulta")) {
+        	        	//consulta si existe el 
+        	        }
         	    }
         	} catch (Exception e) {
         	    e.printStackTrace();
@@ -64,21 +72,21 @@ class Cliente extends Thread {
     	}
     	
     	//aca deberia traer los datos del usuario receptor
-    	if (socket == null || socket.isClosed()) {
-            try {
-                conectar(receptor); // Intentar reconectar si el socket está cerrado
-            } catch (IOException e) {
-            	receptor.getMensajesAlmacenados().add(mensaje);
-                throw new IOException("No se pudo reconectar con " + receptor.getIP() + ":" + receptor.getPuerto(), e);
-            }
+    	
+        try {
+            conectar(receptor); // Intentar reconectar si el socket está cerrado
+        } catch (IOException e) {
+        	receptor.getMensajesAlmacenados().add(mensaje);
+            //throw new IOException("No se pudo reconectar con " + receptor.getIP() + ":" + receptor.getPuerto(), e);
         }
+        
 
         if (out == null) {
         	receptor.getMensajesAlmacenados().add(mensaje);
             throw new IOException("No hay conexión establecida con " + receptor.getIP() + ":" + receptor.getPuerto());
         }
 
-        out.println(mensaje.toString());
+        out.println(mensajeJSON);
         out.flush();
         System.out.println("Enviando mensaje: " + mensaje);
         System.out.println("Mensaje enviado a " + receptor.getIP() + ":" + receptor.getPuerto());
@@ -96,76 +104,4 @@ class Cliente extends Thread {
         }
     }
     
-
-    public String MensajeAJson(Mensaje mensaje) {
-    	StringBuilder json = new StringBuilder();
-        json.append("{");
-
-        // Emisor con solo nombre
-        json.append("\"emisor\": {")
-            .append("\"nombre\": \"").append(escapeJson(mensaje.getEmisor())).append("\"")
-            .append("}, ");
-
-        // Receptor con solo nombre
-        json.append("\"receptor\": {")
-            .append("\"nombre\": \"").append(escapeJson(mensaje.getReceptor())).append("\"")
-            .append("}, ");
-
-        // Contenido del mensaje
-        json.append("\"contenido\": \"").append(escapeJson(mensaje.getContenido())).append("\", ");
-
-        // Fecha y hora en formato ISO-8601
-        json.append("\"fechaYHora\": \"").append(mensaje.getFechaYHora().toString()).append("\"");
-
-        json.append("}");
-        return json.toString();
-    }
-
-    private String escapeJson(String value) {
-        if (value == null) return "";
-        return value.replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r");
-    }
-    
-    public Mensaje JsonAMensaje(String json) {
-
-        // Crear y setear emisor
-        String nombreEmisor = extraerValor(
-            json,
-            "\"emisor\"\\s*:\\s*\\{[^}]*\"nombre\"\\s*:\\s*\"",
-            "\""
-        );
-
-        // Crear y setear receptor
-        String nombreReceptor = extraerValor(
-            json,
-            "\"receptor\"\\s*:\\s*\\{[^}]*\"nombre\"\\s*:\\s*\"",
-            "\""
-        );
-
-        // Extraer contenido
-        String contenido = extraerValor(
-            json,
-            "\"contenido\"\\s*:\\s*\"",
-            "\""
-        );
-
-        // Extraer fecha y hora
-        String fechaYHoraStr = extraerValor(
-            json,
-            "\"fechaYHora\"\\s*:\\s*\"",
-            "\""
-        );
-
-        return new Mensaje(nombreEmisor,nombreReceptor,contenido,LocalDateTime.parse(fechaYHoraStr));
-    }
-
-    public static String extraerValor(String texto, String antesDeRegex, String hastaRegex) {
-        String regex = "(?<=" + antesDeRegex + ")(.*?)(?=" + hastaRegex + ")";
-        Pattern pattern = Pattern.compile(regex, Pattern.DOTALL);
-        Matcher matcher = pattern.matcher(texto);
-        if (matcher.find()) {
-            return matcher.group(1).replace("\\\"", "\"");
-        }
-        return "";
-    }
 }

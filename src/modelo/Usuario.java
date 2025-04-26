@@ -17,6 +17,8 @@ public class Usuario {
 		this.conectado = true;
 		this.cliente = cliente;
 	}
+	
+	public Usuario() {}
 
 	public String getNombre() {
 		return nombre;
@@ -41,6 +43,34 @@ public class Usuario {
 	@Override
 	public String toString() {
 		return "Usuario [nombre=" + nombre + ", IP=" + IP + ", puerto=" + puerto + "]";
+	}
+
+	public Cliente getCliente() {
+		return cliente;
+	}
+
+	public void setCliente(Cliente cliente) {
+		this.cliente = cliente;
+	}
+
+	public void setNombre(String nombre) {
+		this.nombre = nombre;
+	}
+
+	public void setIP(String iP) {
+		IP = iP;
+	}
+
+	public void setPuerto(int puerto) {
+		this.puerto = puerto;
+	}
+
+	public void setConectado(boolean conectado) {
+		this.conectado = conectado;
+	}
+
+	public void setMensajesAlmacenados(ArrayList<Mensaje> mensajesAlmacenados) {
+		this.mensajesAlmacenados = mensajesAlmacenados;
 	} 
 	
 	
