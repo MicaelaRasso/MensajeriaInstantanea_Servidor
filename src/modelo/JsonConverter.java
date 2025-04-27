@@ -1,11 +1,13 @@
 package modelo;
 
+import java.time.LocalDateTime;
+
 public class JsonConverter {
 
     /**
      * Convierte un JSON en un objeto Request.
      */
-    public static Request fromJson(String json) {
+	public static Request fromJson(String json) {
         Request req = new Request();
         req.setOperacion(extractValue(json, "operacion"));
 
@@ -23,7 +25,10 @@ public class JsonConverter {
         req.setReceptor(rec);
 
         req.setContenido(extractValue(json, "contenido"));
-        req.setFechaYHora(extractValue(json, "fechaYHora"));
+        if (!extractValue(json, "fechaYHora").equals("null") || !extractValue(json, "fechaYHora").equals("")) {
+        	LocalDateTime dateTime = LocalDateTime.parse(extractValue(json, "fechaYHora"));
+        	req.setFechaYHora(dateTime);
+		}
         return req;
     }
 
@@ -55,7 +60,7 @@ public class JsonConverter {
         sb.append("\"contenido\":\"")
           .append(request.getContenido()).append("\",");
         sb.append("\"fechaYHora\":\"")
-          .append(request.getFechaYHora()).append("\"");
+          .append(request.getFechaYHora().toString()).append("\"");
 
         sb.append("}");
         return sb.toString();

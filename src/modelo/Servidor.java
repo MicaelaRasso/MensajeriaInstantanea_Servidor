@@ -32,7 +32,7 @@ public class Servidor {
 
                         BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                         String requestJson = in.readLine();
-
+                        System.out.println(requestJson);
                         if (requestJson != null) {
                             procesaRequest(requestJson, socket);
                         } else {
@@ -55,7 +55,7 @@ public class Servidor {
         if (operacion.equals("registro")) {
             this.registrarUsuario(request.getEmisor(), socket);
         } else if (operacion.equals("consulta")) {
-            this.consultarUsuario(request.getContenido());
+            this.consultarUsuario(request, requestJson);
         } else if (operacion.equals("mensaje")) {
             this.enviarMensaje(request, requestJson);
         }
@@ -75,11 +75,11 @@ public class Servidor {
             } else {
                 // El usuario ya estaba conectado: no permitimos conexión duplicada
                 System.out.println("Nombre de usuario en uso: " + nombreUsuario);
-                PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-                out.println("0"); // "0" significa que el nombre está en uso
                 socket.close();
                 return;
             }
+            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+            out.println("0"); // "0" significa que el nombre está en uso
         } else {
             // Usuario nuevo
             String ip = socket.getInetAddress().getHostAddress();
@@ -93,11 +93,16 @@ public class Servidor {
 
     }
 
-    public void consultarUsuario(String nombreUsuario) {
+    public void consultarUsuario(Request request, String mensajeJSON) throws IOException {
+    	String nombreUsuario = request.getContenido();
         if (existeUsuario(nombreUsuario)) {
+        	request.getEmisor().getCliente().enviarMensaje(request, mensajeJSON);
             System.out.println("Consulta: usuario " + nombreUsuario + " está en línea.");
         } else {
             System.out.println("Consulta: usuario " + nombreUsuario + " no encontrado.");
+            request.setContenido("");
+            String mensajeJSONnuevo = JsonConverter.toJson(request);
+            request.getEmisor().getCliente().enviarMensaje(request, mensajeJSONnuevo);
         }
     }
 

@@ -112,8 +112,7 @@ class Cliente extends Thread {
             request.setFechaYHora(mensaje.getFechaYHora());
 
             String mensajeJson = JsonConverter.toJson(request);
-            out.println(mensajeJson);
-            out.flush();
+            enviarMensaje(request, mensajeJson);
         }
 
         System.out.println("Se enviaron " + mensajesPendientes.size() + " mensajes almacenados a " + usuario.getNombre());
