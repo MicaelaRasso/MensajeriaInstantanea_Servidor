@@ -9,7 +9,7 @@ import java.util.ArrayList;
 
 class Cliente extends Thread {
     private Socket socket;
-    private Servidor servidor;
+	private Servidor servidor;
     private PrintWriter out;
 
     public Cliente(Socket socket, Servidor servidor) {
@@ -21,6 +21,7 @@ class Cliente extends Thread {
     public void run() {
         try (BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
             this.out = new PrintWriter(socket.getOutputStream(), true);
+            System.out.println("entra ");
 
             String mensaje;
             while ((mensaje = in.readLine()) != null) {
@@ -33,18 +34,16 @@ class Cliente extends Thread {
             }
 
         } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
+        	System.out.println("El usuario se ha desconectado");
             cerrarConexion();
         }
     }
 
     public void enviarMensaje(Request request, String mensajeJSON) {
-        Usuario receptor = request.getReceptor();
+        Usuario receptor = this.servidor.getDirectorio().get(request.getReceptor().getNombre());
         String nombreReceptor = receptor.getNombre();
-        Cliente clienteReceptor = receptor.getCliente();
 
-        if (clienteReceptor == null || clienteReceptor.out == null) {
+        if (this.socket == null || this.socket.isClosed()) {
             desconectarUsuario(receptor);
             receptor.getMensajesAlmacenados().add(new Mensaje(
                     request.getEmisor().getNombre(),
@@ -55,11 +54,12 @@ class Cliente extends Thread {
             System.out.println("Receptor no conectado, mensaje almacenado.");
             return;
         } else {
-			clienteReceptor.out.println(mensajeJSON);
-	        clienteReceptor.out.flush();
+			this.out.println(mensajeJSON);
+			System.out.println(this.socket.getPort());
 	        System.out.println("Mensaje enviado a " + nombreReceptor);
 		}       
     }
+ 
 
     private void cerrarConexion() {
         try {
@@ -80,7 +80,6 @@ class Cliente extends Thread {
     
     public void reconectarUsuario(Usuario usuario, Cliente nuevoCliente) {
         usuario.setConectado(true);
-        usuario.setCliente(nuevoCliente);
         System.out.println("Usuario reconectado: " + usuario.getNombre());
 
         // Enviar los mensajes almacenados
@@ -125,4 +124,7 @@ class Cliente extends Thread {
         return out;
     }
 
+    public Socket getSocket() {
+		return socket;
+	}
 }

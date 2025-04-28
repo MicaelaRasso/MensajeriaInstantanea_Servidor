@@ -71,6 +71,23 @@ public class Usuario {
 
 	public void setMensajesAlmacenados(ArrayList<Mensaje> mensajesAlmacenados) {
 		this.mensajesAlmacenados = mensajesAlmacenados;
+	}
+
+	public void enviarMensaje(Request request, String mensajeJSON) {
+		// TODO Auto-generated method stub
+		if(cliente != null) {
+			cliente.enviarMensaje(request, mensajeJSON);
+		}else {
+            this.conectado = false;
+            this.getMensajesAlmacenados().add(new Mensaje(
+                    request.getEmisor().getNombre(),
+                    request.getReceptor().getNombre(),
+                    request.getContenido(),
+                    request.getFechaYHora()
+            ));
+            System.out.println("Receptor no conectado, mensaje almacenado.");
+            return;
+		}
 	} 
 	
 	

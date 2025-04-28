@@ -28,15 +28,13 @@ public class Servidor {
 
                     while (true) {
                         Socket socket = serverSocket.accept();
-                        System.out.println("Nueva conexión desde " + socket.getInetAddress().getHostAddress());
+                        System.out.println("Nueva conexión desde " + socket.getInetAddress().getHostAddress() + socket.getPort());
 
                         BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                         String requestJson = in.readLine();
                         System.out.println(requestJson);
                         if (requestJson != null) {
-                            procesaRequest(requestJson, socket);
-                        } else {
-                            socket.close();
+                            procesaRequest(requestJson);
                         }
                     }
 
@@ -48,12 +46,11 @@ public class Servidor {
         new Thread(servidorRunnable).start();
     }
 
-    public void procesaRequest(String requestJson, Socket socket) throws IOException {
+    public void procesaRequest(String requestJson) throws IOException {
         Request request = JsonConverter.fromJson(requestJson);
         String operacion = request.getOperacion();
-
         if (operacion.equals("registro")) {
-            this.registrarUsuario(request.getEmisor(), socket);
+            this.registrarUsuario(request.getEmisor());
         } else if (operacion.equals("consulta")) {
             this.consultarUsuario(request, requestJson);
         } else if (operacion.equals("mensaje")) {
@@ -61,16 +58,19 @@ public class Servidor {
         }
     }
 
-    public void registrarUsuario(Usuario usuario, Socket socket) throws IOException {
+    public void registrarUsuario(Usuario usuario) throws IOException {
+    	Socket socket = new Socket(usuario.getIP(), usuario.getPuerto());
+    	System.out.println("Usuario registrado con " + usuario.getIP() + usuario.getPuerto());
         String nombreUsuario = usuario.getNombre();
         if (existeUsuario(nombreUsuario)) {
             Usuario usuarioExistente = directorio.get(nombreUsuario);
 
-            if (!usuarioExistente.isConectado()) {
+            if (!usuarioExistente.isConectado()) { // esto no tiene sentido, como el servidor va a reconectar usuarios?
                 // El usuario existe pero estaba desconectado: lo reconectamos
                 Cliente nuevoCliente = new Cliente(socket, this);
-                nuevoCliente.reconectarUsuario(usuarioExistente, nuevoCliente);
+                usuarioExistente.setCliente(nuevoCliente);
                 nuevoCliente.start();
+                nuevoCliente.reconectarUsuario(usuarioExistente, nuevoCliente);
                 System.out.println("Usuario reconectado: " + nombreUsuario);
             } else {
                 // El usuario ya estaba conectado: no permitimos conexión duplicada
@@ -95,23 +95,27 @@ public class Servidor {
 
     public void consultarUsuario(Request request, String mensajeJSON) throws IOException {
     	String nombreUsuario = request.getContenido();
+    	System.out.println("Consultando por usuario " + nombreUsuario);
         if (existeUsuario(nombreUsuario)) {
-        	request.getEmisor().getCliente().enviarMensaje(request, mensajeJSON);
+        	System.out.println("Usuario Encontrado avisando al cliente...");
+        	
+        	this.directorio.get(request.getEmisor().getNombre()).getCliente().enviarMensaje(request,mensajeJSON);        	
             System.out.println("Consulta: usuario " + nombreUsuario + " está en línea.");
         } else {
             System.out.println("Consulta: usuario " + nombreUsuario + " no encontrado.");
             request.setContenido("");
             String mensajeJSONnuevo = JsonConverter.toJson(request);
-            request.getEmisor().getCliente().enviarMensaje(request, mensajeJSONnuevo);
+            this.directorio.get(request.getEmisor().getNombre()).getCliente().enviarMensaje(request,mensajeJSONnuevo);
         }
     }
 
     public void enviarMensaje(Request request, String mensajeJSON) {
         Usuario receptor = request.getReceptor();
         if (receptor != null) {
-            receptor.getCliente().enviarMensaje(request, mensajeJSON);
+        	Usuario usuario = this.directorio.get(receptor.getNombre());
+        	usuario.enviarMensaje(request,mensajeJSON);
         } else {
-            System.out.println("Error: receptor no encontrado: " + request.getReceptor());
+            System.out.println("Error: receptor no encontrado");
         }
     }
     
@@ -138,5 +142,9 @@ public class Servidor {
     public Boolean existeUsuario(String nombreUsuario) {
         return this.directorio.containsKey(nombreUsuario);
     }
+    
+    public ConcurrentHashMap<String, Usuario> getDirectorio() {
+		return directorio;
+	}
 
 }
