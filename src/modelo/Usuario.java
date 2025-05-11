@@ -88,8 +88,16 @@ public class Usuario {
             System.out.println("Receptor no conectado, mensaje almacenado.");
             return;
 		}
-	} 
+	}
 	
-	
-	
+    public void reconectarUsuario() {
+        setConectado(true);
+        System.out.println("Usuario reconectado: " + getNombre());
+    }
+    
+    public void desconectarUsuario() {
+        setConectado(false);
+        setCliente(null);
+        System.out.println("Usuario desconectado: " + getNombre());
+    }
 }

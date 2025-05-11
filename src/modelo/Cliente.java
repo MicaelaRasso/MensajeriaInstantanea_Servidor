@@ -11,6 +11,7 @@ class Cliente extends Thread {
     private Socket socket;
 	private Servidor servidor;
     private PrintWriter out;
+    private Usuario usuario;
 
     public Cliente(Socket socket, Servidor servidor) {
         this.socket = socket;
@@ -21,13 +22,16 @@ class Cliente extends Thread {
     public void run() {
         try (BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
             this.out = new PrintWriter(socket.getOutputStream(), true);
-            System.out.println("entra ");
-
+            System.out.println(this.out.toString());
+            // Enviar los mensajes almacenados
+            if(this.usuario != null) {            	
+            	this.enviarMensajesAlmacenados();
+            }
             String mensaje;
             while ((mensaje = in.readLine()) != null) {
                 Request request = JsonConverter.fromJson(mensaje);
                 String op = request.getOperacion();
-
+                
                 if (op.equals("mensaje")) {
                     this.enviarMensaje(request, mensaje);
                 }
@@ -44,7 +48,7 @@ class Cliente extends Thread {
         String nombreReceptor = receptor.getNombre();
 
         if (this.socket == null || this.socket.isClosed()) {
-            desconectarUsuario(receptor);
+            receptor.desconectarUsuario();
             receptor.getMensajesAlmacenados().add(new Mensaje(
                     request.getEmisor().getNombre(),
                     request.getReceptor().getNombre(),
@@ -71,30 +75,15 @@ class Cliente extends Thread {
             System.err.println("Error al cerrar la conexión");
         }
     }
-    
-    public void desconectarUsuario(Usuario receptor) {
-        receptor.setConectado(false);
-        receptor.setCliente(null);
-        System.out.println("Usuario desconectado: " + receptor.getNombre());
-    }
-    
-    public void reconectarUsuario(Usuario usuario, Cliente nuevoCliente) {
-        usuario.setConectado(true);
-        System.out.println("Usuario reconectado: " + usuario.getNombre());
 
-        // Enviar los mensajes almacenados
-        enviarMensajesAlmacenados(usuario);
-    }
-
-    public void enviarMensajesAlmacenados(Usuario usuario) {
+    public void enviarMensajesAlmacenados() {
         ArrayList<Mensaje> mensajesPendientes = usuario.getMensajesAlmacenados();
         
         if (mensajesPendientes.isEmpty()) {
             return;
         }
 
-        PrintWriter out = usuario.getCliente().getOut();
-        if (out == null) {
+        if (this.out == null) {
             System.out.println("No se puede enviar mensajes almacenados a " + usuario.getNombre() + " porque no tiene salida activa.");
             return;
         }
@@ -127,4 +116,8 @@ class Cliente extends Thread {
     public Socket getSocket() {
 		return socket;
 	}
+    
+    public void setUsuario(Usuario usuario) {
+    	this.usuario = usuario;
+    }
 }
