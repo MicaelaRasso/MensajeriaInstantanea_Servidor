@@ -65,21 +65,21 @@ public class Servidor {
         if (existeUsuario(nombreUsuario)) {
             Usuario usuarioExistente = directorio.get(nombreUsuario);
 
-            if (!usuarioExistente.isConectado()) { // esto no tiene sentido, como el servidor va a reconectar usuarios?
+            if (!usuarioExistente.isConectado()) {
                 // El usuario existe pero estaba desconectado: lo reconectamos
                 Cliente nuevoCliente = new Cliente(socket, this);
-                usuarioExistente.setCliente(nuevoCliente);
+                nuevoCliente.setUsuario(usuarioExistente);
                 nuevoCliente.start();
-                nuevoCliente.reconectarUsuario(usuarioExistente, nuevoCliente);
-                System.out.println("Usuario reconectado: " + nombreUsuario);
+                usuarioExistente.setCliente(nuevoCliente);
+                usuarioExistente.reconectarUsuario();
             } else {
                 // El usuario ya estaba conectado: no permitimos conexión duplicada
                 System.out.println("Nombre de usuario en uso: " + nombreUsuario);
                 socket.close();
+                PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+                out.println("0"); // "0" significa que el nombre está en uso
                 return;
             }
-            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-            out.println("0"); // "0" significa que el nombre está en uso
         } else {
             // Usuario nuevo
             String ip = socket.getInetAddress().getHostAddress();
