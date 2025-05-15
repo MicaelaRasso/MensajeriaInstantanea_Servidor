@@ -22,24 +22,17 @@ class Cliente extends Thread {
     public void run() {
         try (BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
             this.out = new PrintWriter(socket.getOutputStream(), true);
-            System.out.println(this.out.toString());
             // Enviar los mensajes almacenados
             if(this.usuario != null) {            	
             	this.enviarMensajesAlmacenados();
             }
             String mensaje;
             while ((mensaje = in.readLine()) != null) {
-                Request request = JsonConverter.fromJson(mensaje);
-                String op = request.getOperacion();
-                
-                if (op.equals("mensaje")) {
-                    this.enviarMensaje(request, mensaje);
-                }
+                this.servidor.procesaRequest(mensaje,this.socket);
             }
 
         } catch (IOException e) {
         	System.out.println("El usuario se ha desconectado");
-            cerrarConexion();
         }
     }
 
@@ -48,7 +41,7 @@ class Cliente extends Thread {
         String nombreReceptor = receptor.getNombre();
 
         if (this.socket == null || this.socket.isClosed()) {
-            receptor.desconectarUsuario();
+            //receptor.desconectarUsuario();
             receptor.getMensajesAlmacenados().add(new Mensaje(
                     request.getEmisor().getNombre(),
                     request.getReceptor().getNombre(),
@@ -58,8 +51,8 @@ class Cliente extends Thread {
             System.out.println("Receptor no conectado, mensaje almacenado.");
             return;
         } else {
+        	System.out.println(mensajeJSON);
 			this.out.println(mensajeJSON);
-			System.out.println(this.socket.getPort());
 	        System.out.println("Mensaje enviado a " + nombreReceptor);
 		}       
     }

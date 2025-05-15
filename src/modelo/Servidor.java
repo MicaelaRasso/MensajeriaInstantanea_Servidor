@@ -31,10 +31,14 @@ public class Servidor {
                         System.out.println("Nueva conexión desde " + socket.getInetAddress().getHostAddress() + socket.getPort());
 
                         BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-                        String requestJson = in.readLine();
-                        System.out.println(requestJson);
-                        if (requestJson != null) {
-                            procesaRequest(requestJson);
+                        try {                        	
+                        	String requestJson = in.readLine();
+                            System.out.println(requestJson);
+                            if (requestJson != null) {
+                                procesaRequest(requestJson,socket);
+                            }
+                        }catch(IOException e){
+                        	System.out.println("Se ha perdido la conexion con el cliente :  " + socket.getInetAddress().getHostAddress() + socket.getPort());
                         }
                     }
 
@@ -46,11 +50,11 @@ public class Servidor {
         new Thread(servidorRunnable).start();
     }
 
-    public void procesaRequest(String requestJson) throws IOException {
+    public void procesaRequest(String requestJson, Socket socket) throws IOException {
         Request request = JsonConverter.fromJson(requestJson);
         String operacion = request.getOperacion();
         if (operacion.equals("registro")) {
-            this.registrarUsuario(request.getEmisor());
+            this.registrarUsuario(request.getEmisor(),socket);
         } else if (operacion.equals("consulta")) {
             this.consultarUsuario(request, requestJson);
         } else if (operacion.equals("mensaje")) {
@@ -58,13 +62,11 @@ public class Servidor {
         }
     }
 
-    public void registrarUsuario(Usuario usuario) throws IOException {
-    	Socket socket = new Socket(usuario.getIP(), usuario.getPuerto());
-    	System.out.println("Usuario registrado con " + usuario.getIP() + usuario.getPuerto());
+    public void registrarUsuario(Usuario usuario, Socket socket) throws IOException {
         String nombreUsuario = usuario.getNombre();
         if (existeUsuario(nombreUsuario)) {
             Usuario usuarioExistente = directorio.get(nombreUsuario);
-
+            
             if (!usuarioExistente.isConectado()) {
                 // El usuario existe pero estaba desconectado: lo reconectamos
                 Cliente nuevoCliente = new Cliente(socket, this);
@@ -98,9 +100,8 @@ public class Servidor {
     	System.out.println("Consultando por usuario " + nombreUsuario);
         if (existeUsuario(nombreUsuario)) {
         	System.out.println("Usuario Encontrado avisando al cliente...");
-        	
+        	System.out.println("Consulta: usuario " + nombreUsuario + " está en línea.");       	
         	this.directorio.get(request.getEmisor().getNombre()).getCliente().enviarMensaje(request,mensajeJSON);        	
-            System.out.println("Consulta: usuario " + nombreUsuario + " está en línea.");
         } else {
             System.out.println("Consulta: usuario " + nombreUsuario + " no encontrado.");
             request.setContenido("");
