@@ -94,10 +94,9 @@ public class Usuario {
         setConectado(true);
         System.out.println("Usuario reconectado: " + getNombre());
     }
-    /*
     public void desconectarUsuario() {
         setConectado(false);
         setCliente(null);
         System.out.println("Usuario desconectado: " + getNombre());
-    }*/
+    }
 }

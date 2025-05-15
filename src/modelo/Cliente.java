@@ -32,6 +32,7 @@ class Cliente extends Thread {
             }
 
         } catch (IOException e) {
+        	this.usuario.desconectarUsuario();
         	System.out.println("El usuario se ha desconectado");
         }
     }

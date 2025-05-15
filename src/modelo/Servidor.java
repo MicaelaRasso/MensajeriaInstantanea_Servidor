@@ -89,6 +89,7 @@ public class Servidor {
             Cliente cliente = new Cliente(socket, this);
             Usuario u = new Usuario(nombreUsuario, ip, puertoCliente, cliente);
             directorio.put(nombreUsuario, u);
+            cliente.setUsuario(u);
             cliente.start(); // Arranca el hilo del cliente
             System.out.println("Usuario registrado: " + nombreUsuario);
         }
