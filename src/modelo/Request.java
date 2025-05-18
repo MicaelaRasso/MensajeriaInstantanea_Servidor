@@ -39,4 +39,5 @@ public class Request {
     public void setFechaYHora(LocalDateTime fechaYHora) {
         this.fechaYHora = fechaYHora;
     }
+    
 }

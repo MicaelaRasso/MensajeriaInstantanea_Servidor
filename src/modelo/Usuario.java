@@ -2,16 +2,17 @@ package modelo;
 
 public class Usuario {
     private String nombre;
-    private String IP;
+    private String address;
+    private boolean isConnected = false;
 
     public Usuario() {
         this.nombre = "";
-        this.IP = "";
+        this.address = "";
     }
 
-    public Usuario(String nombre, String IP) {
+    public Usuario(String nombre, String address) {
         this.nombre = nombre;
-        this.IP     = IP;
+        this.address = address;
     }
 
     public String getNombre() {
@@ -22,16 +23,25 @@ public class Usuario {
         this.nombre = nombre;
     }
 
-    public String getIP() {
-        return IP;
+    public String getAddress() {
+        return address;
     }
 
     public void setIP(String IP) {
-        this.IP = IP;
+        this.address = address;
     }
 
     @Override
     public String toString() {
-        return nombre + "@" + IP;
+        return nombre + "@" + address;
     }
+
+	public boolean isConnected() {
+		return isConnected;
+	}
+
+	public void setConnected(boolean isConnected) {
+		this.isConnected = isConnected;
+	}
+    
 }
