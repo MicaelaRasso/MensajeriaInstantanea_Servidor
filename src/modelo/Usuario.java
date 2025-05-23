@@ -27,10 +27,6 @@ public class Usuario {
         return address;
     }
 
-    public void setIP(String IP) {
-        this.address = address;
-    }
-
     @Override
     public String toString() {
         return nombre + "@" + address;

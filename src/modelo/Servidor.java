@@ -2,6 +2,7 @@ package modelo;
 
 import java.io.*;
 import java.net.*;
+import java.util.List;
 
 public class Servidor {
     private final int puerto;
@@ -32,12 +33,12 @@ public class Servidor {
         	String response;
         	out.println(header);
         	while ((response = in.readLine()) != null) {
-        		System.out.println(response);
+//        		System.out.println(response);
         		if(response.equals("RESPUESTA:ACK")) {
-        			System.out.println("Conectado al Proxy en " + PROXY_HOST + ":" + PROXY_PORT);
+//        			System.out.println("Conectado al Proxy en " + PROXY_HOST + ":" + PROXY_PORT);
         			this.iniciar();
         		}else {
-        			System.out.println("No se ha podido registrar el servidor en el proxy");
+//        			System.out.println("No se ha podido registrar el servidor en el proxy");
         			socket.close();
         		}
         	}
@@ -76,10 +77,10 @@ public class Servidor {
             	while ((response = in.readLine()) != null) {
             		System.out.println(response);
             		if(response.equals("RESPUESTA:ACK")) {
-            			System.out.println("Conectado al Proxy en " + PROXY_HOST + ":" + PROXY_PORT);
-            			System.out.println("mensaje enviado");
+//            			System.out.println("Conectado al Proxy en " + PROXY_HOST + ":" + PROXY_PORT);
+//            			System.out.println("mensaje enviado");
             		}else {
-            			System.out.println("No se ha podido registrar el servidor en el proxy");
+//            			System.out.println("No se ha podido registrar el servidor en el proxy");
             			socket.close();
             		}
             	}
@@ -89,6 +90,21 @@ public class Servidor {
             }
         }
 
+		private void entregarMensajesPendientes(List<Request> mPendientes) throws IOException {
+	    	if (mPendientes != null) {
+	    	    synchronized (mPendientes) {
+	    	        while (!mPendientes.isEmpty()) {
+	    	            Request mensaje = mPendientes.remove(0);
+	    	    		if(mensaje != null)                    			
+	    	    			enviarMensaje(mensaje,mensaje.getReceptor().getAddress());
+	    	    		else {
+	    	    			ServerSystem.getInstance().almacenarMensaje(mensaje);
+	    	    			break;
+	    	    		}
+	    	        }
+	    	    }
+	    	}	
+		}
         @Override
         public void run() {
             try {
@@ -97,7 +113,7 @@ public class Servidor {
 
                 String header;
                 while ((header = in.readLine()) != null) {
-                	System.out.println(header);
+//                	System.out.println(header);
                     // header: "OPERACION:xxx;USER:yyy"
                     String payload = in.readLine();      // JSON del Request
                     Request req   = JsonConverter.fromJson(payload);
@@ -106,11 +122,11 @@ public class Servidor {
                     if(req == null) {
                     	if(sys.parseField(header,"OPERACION").equals("DISCONNECT")) {
                     		String address = sys.parseField(header,"ADDRESS");
-                    		System.out.println("desconectando usuario");
+//                    		System.out.println("desconectando usuario");
                     		if(!address.equals("")) {                    			
                     			for (Usuario usuario : sys.getUsuarios().values()) {
                     			    if(usuario.getAddress().equals(address)) {
-                    			    	System.out.println("Usuario encontrado, desconectando");
+//                    			    	System.out.println("Usuario encontrado, desconectando");
                     			    	usuario.setConnected(false);
                     			    }
                     			}
@@ -125,6 +141,12 @@ public class Servidor {
                     		response = sys.registrarUsuario(req,header);
                     		out.println("ACK");
                     		out.println(response);
+                    		
+                            if(response.equals("registrado")||response.equals("en uso")) {
+                            	List<Request> mPendientes = sys.obtenerPendientes(req);
+                            	if (mPendientes != null) 
+                            		entregarMensajesPendientes(mPendientes);
+                            }
                     		break;
                     	case "consulta":
                     		Request resp = sys.manejarConsulta(req);
@@ -133,9 +155,10 @@ public class Servidor {
                     		break;
                     	case "mensaje":
                     		Request r = sys.manejarMensaje(req);
-                    		if(r != null) {                    			
+                    		if(r != null)                    			
                     			enviarMensaje(r,r.getReceptor().getAddress());
-                    		}
+                    		else
+                    			sys.almacenarMensaje(req);
                     		out.println("ACK");
                     		out.println("enviado");
                     		break;
@@ -154,13 +177,14 @@ public class Servidor {
             } finally {
                 try {
                     socket.close();
-                    System.out.println("[ClientHandler] Conexión cerrada con " +
+/*                    System.out.println("[ClientHandler] Conexión cerrada con " +
                         socket.getInetAddress().getHostAddress() + ":" + socket.getPort());
-                } catch (IOException ex) {
+*/                } catch (IOException ex) {
                     ex.printStackTrace();
                 }
             }
         }
+
     }
     
     
@@ -168,6 +192,6 @@ public class Servidor {
  
 		Servidor s = new Servidor(5000);
 		s.registrarServidor();
-        System.out.println("[SERVIDOR] Arrancando servidor en puerto " + s.puerto);
+//        System.out.println("[SERVIDOR] Arrancando servidor en puerto " + s.puerto);
     }
 }
