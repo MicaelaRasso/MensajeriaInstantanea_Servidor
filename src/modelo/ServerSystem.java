@@ -76,6 +76,7 @@ public class ServerSystem {
         if(receptor != null) {
         	if(receptor.isConnected()) {
         		resend = new Request();
+        		resend.setOperacion("mensaje");
         		resend.setContenido(texto);
         		resend.setEmisor(req.getEmisor());
         		resend.setReceptor(receptor);

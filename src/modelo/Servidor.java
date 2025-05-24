@@ -136,7 +136,7 @@ public class Servidor {
                     		out.println(JsonConverter.toJson(resp));
                     		break;
                     	case "mensaje":
-                    		Request r = sys.createResponse("RESPUESTA", "respuesta");
+                    		Request r = sys.createResponse("Respuesta", "respuesta");
                     		out.println("ACK");
                     		out.println(JsonConverter.toJson(r));
                     		Request resend = sys.manejarMensaje(req);
@@ -160,8 +160,8 @@ public class Servidor {
             } finally {
                 try {
                     socket.close();
-                    System.out.println("[ClientHandler] Conexión cerrada con " +
-                        socket.getInetAddress().getHostAddress() + ":" + socket.getPort());
+                 //   System.out.println("[ClientHandler] Conexión cerrada con " +
+                 //       socket.getInetAddress().getHostAddress() + ":" + socket.getPort());
                 } catch (IOException ex) {
                     ex.printStackTrace();
                 }
