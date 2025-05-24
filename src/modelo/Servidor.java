@@ -65,6 +65,7 @@ public class Servidor {
         
         private void enviarMensaje(Request req,String address) throws IOException {
             Socket socket = new Socket(PROXY_HOST, PROXY_PORT);
+            boolean sent = false;
             try {        	
             	BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             	PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
@@ -73,9 +74,10 @@ public class Servidor {
             	String response;
             	out.println(header);
             	out.println(body);
-            	while ((response = in.readLine()) != null) {
+            	while ((response = in.readLine()) != null && !sent) {
             		System.out.println(response);
-            		if(response.equals("RESPUESTA:ACK")) {
+            		if(response.equals("ACK")) {
+            			sent = true;
             			System.out.println("Conectado al Proxy en " + PROXY_HOST + ":" + PROXY_PORT);
             			System.out.println("mensaje enviado");
             		}else {
@@ -87,6 +89,7 @@ public class Servidor {
             	System.out.println(e);
             	socket.close();
             }
+            socket.close();
         }
 
         @Override
@@ -101,6 +104,7 @@ public class Servidor {
                     // header: "OPERACION:xxx;USER:yyy"
                     String payload = in.readLine();      // JSON del Request
                     Request req   = JsonConverter.fromJson(payload);
+                    System.out.println(payload);
                     ServerSystem sys = ServerSystem.getInstance();
                     
                     if(req == null) {
@@ -122,9 +126,9 @@ public class Servidor {
                     	String response;
                     	switch (req.getOperacion()) {
                     	case "registro":
-                    		response = sys.registrarUsuario(req,header);
+                    		Request reg = sys.registrarUsuario(req,header);
                     		out.println("ACK");
-                    		out.println(response);
+                    		out.println(JsonConverter.toJson(reg));
                     		break;
                     	case "consulta":
                     		Request resp = sys.manejarConsulta(req);
@@ -132,12 +136,14 @@ public class Servidor {
                     		out.println(JsonConverter.toJson(resp));
                     		break;
                     	case "mensaje":
-                    		Request r = sys.manejarMensaje(req);
-                    		if(r != null) {                    			
-                    			enviarMensaje(r,r.getReceptor().getAddress());
-                    		}
+                    		Request r = sys.createResponse("RESPUESTA", "respuesta");
                     		out.println("ACK");
-                    		out.println("enviado");
+                    		out.println(JsonConverter.toJson(r));
+                    		Request resend = sys.manejarMensaje(req);
+                    		if(resend != null) {                    			
+                    			enviarMensaje(resend,resend.getReceptor().getAddress());
+                    			out.println("ACK");
+                    		}
                     		break;
                     	case "heartbeat":
                     		sys.actualizarHeartbeat(req);

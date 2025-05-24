@@ -24,23 +24,24 @@ public class ServerSystem {
     }
 
     /** Registro de un nuevo usuario */
-    public synchronized String registrarUsuario(Request req,String header) {
+    public synchronized Request registrarUsuario(Request req,String header) {
         String nombre = req.getEmisor().getNombre();
         String address     = parseField(header,"ADDRESS");
         Usuario usuario = usuarios.get(nombre);
-        String response;
+        Request response;
         if(usuario != null && !usuario.isConnected()) {
         	usuario.setConnected(true);
         	System.out.println("[ServerSystem] Usuario reconectado: " + nombre + "@" + address);
-        	response = "registrado";
+        	response = createResponse("Respuesta","registrado");
         }else {
         	if(usuario == null) {
         		Usuario u = new Usuario(nombre,address);
+        		u.setConnected(true);
         		usuarios.put(nombre, u);
         		System.out.println("[ServerSystem] Usuario registrado: " + nombre + "@" + address);
-        		response = "registrado";
+        		response = createResponse("Respuesta","registrado");
         	}else {
-        		response = "en uso";
+        		response = createResponse("Respuesta","en uso");
         		System.out.println("[ServerSystem] Usuario en uso: " + nombre);
         	}
         }
@@ -70,8 +71,8 @@ public class ServerSystem {
         String texto    = req.getContenido();
         Request resend = null;
         //pendings.computeIfAbsent(receptor, k -> new ArrayList<>()).add(texto);
-        
         Usuario receptor = usuarios.get(nombreReceptor);
+        System.out.println(receptor.isConnected());
         if(receptor != null) {
         	if(receptor.isConnected()) {
         		resend = new Request();
@@ -96,6 +97,28 @@ public class ServerSystem {
     public void actualizarHeartbeat(Request req) {
         System.out.println("[ServerSystem] Heartbeat recibido de "
             + req.getEmisor().getNombre() + " a las " + LocalDateTime.now());
+    }
+    
+    public Request createResponse(String operacion,String contenido) {
+    	Request r = new Request();
+    	Usuario u = new Usuario();
+    	u.setNombre("");
+    	
+    	r.setContenido(contenido);
+    	r.setOperacion(operacion);
+    	r.setEmisor(u);
+    	r.setReceptor(u);
+    	r.setFechaYHora(LocalDateTime.now());
+    	return r;
+    }
+    public Request createResponse(String operacion,String contenido,Usuario emisor, Usuario receptor,LocalDateTime fechaHora) {
+    	Request r = new Request();
+    	r.setContenido(contenido);
+    	r.setOperacion(operacion);
+    	r.setEmisor(emisor);
+    	r.setReceptor(receptor);
+    	r.setFechaYHora(fechaHora);
+    	return r;
     }
     
     /** Extrae valor tras "clave:valor" en un header separado por ';' */
