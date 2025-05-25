@@ -24,24 +24,25 @@ public class ServerSystem {
     }
 
     /** Registro de un nuevo usuario */
-    public synchronized String registrarUsuario(Request req,String header) {
+    public synchronized Request registrarUsuario(Request req,String header) {
         String nombre = req.getEmisor().getNombre();
         String address = parseField(header,"ADDRESS");
         Usuario usuario = usuarios.get(nombre);
-        String response;
+        Request response;
         if(usuario != null && !usuario.isConnected()) {
         	usuario.setConnected(true);
-//        	System.out.println("[ServerSystem] Usuario reconectado: " + nombre + "@" + address);
-        	response = "registrado";
+        	System.out.println("[ServerSystem] Usuario reconectado: " + nombre + "@" + address);
+        	response = createResponse("Respuesta","registrado");
         }else {
         	if(usuario == null) {
         		Usuario u = new Usuario(nombre,address);
+        		u.setConnected(true);
         		usuarios.put(nombre, u);
-//        		System.out.println("[ServerSystem] Usuario registrado: " + nombre + "@" + address);
-        		response = "registrado";
+        		System.out.println("[ServerSystem] Usuario registrado: " + nombre + "@" + address);
+        		response = createResponse("Respuesta","registrado");
         	}else {
-        		response = "en uso";
-//        		System.out.println("[ServerSystem] Usuario en uso: " + nombre);
+        		response = createResponse("Respuesta","en uso");
+        		System.out.println("[ServerSystem] Usuario en uso: " + nombre);
         	}
         }
         pendings.putIfAbsent(nombre, new ArrayList<>());        
@@ -70,17 +71,20 @@ public class ServerSystem {
         String nombreReceptor = req.getReceptor().getNombre();
         String texto = req.getContenido();
         Request resend = null;
-        
+        //pendings.computeIfAbsent(receptor, k -> new ArrayList<>()).add(texto);
         Usuario receptor = usuarios.get(nombreReceptor);
-        if(receptor != null && receptor.isConnected()) {
-    		resend = new Request();
-    		resend.setContenido(texto);
-    		resend.setEmisor(req.getEmisor());
-    		resend.setReceptor(receptor);
-    		resend.setFechaYHora(req.getFechaYHora());
-        	/*}else{  no hay else aca, se maneja en el ServerSystem      		
-        		//System.out.println("[ServerSystem] Mensaje para " + nombreReceptor + " almacenado.");
-        	}*/
+        System.out.println(receptor.isConnected());
+        if(receptor != null) {
+        	if(receptor.isConnected()) {
+        		resend = new Request();
+        		resend.setOperacion("mensaje");
+        		resend.setContenido(texto);
+        		resend.setEmisor(req.getEmisor());
+        		resend.setReceptor(receptor);
+        		resend.setFechaYHora(req.getFechaYHora());
+        	}else{        		
+        		System.out.println("[ServerSystem] Mensaje para " + nombreReceptor + " almacenado.");
+        	}
         }
         return resend;
     }
@@ -110,6 +114,28 @@ public class ServerSystem {
 /*        System.out.println("[ServerSystem] Heartbeat recibido de "
             + req.getEmisor().getNombre() + " a las " + LocalDateTime.now());
  */   }
+    
+    public Request createResponse(String operacion,String contenido) {
+    	Request r = new Request();
+    	Usuario u = new Usuario();
+    	u.setNombre("");
+    	
+    	r.setContenido(contenido);
+    	r.setOperacion(operacion);
+    	r.setEmisor(u);
+    	r.setReceptor(u);
+    	r.setFechaYHora(LocalDateTime.now());
+    	return r;
+    }
+    public Request createResponse(String operacion,String contenido,Usuario emisor, Usuario receptor,LocalDateTime fechaHora) {
+    	Request r = new Request();
+    	r.setContenido(contenido);
+    	r.setOperacion(operacion);
+    	r.setEmisor(emisor);
+    	r.setReceptor(receptor);
+    	r.setFechaYHora(fechaHora);
+    	return r;
+    }
     
     /** Extrae valor tras "clave:valor" en un header separado por ';' */
     public String parseField(String header, String key) {

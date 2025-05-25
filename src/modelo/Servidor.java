@@ -66,6 +66,7 @@ public class Servidor {
         
         private void enviarMensaje(Request req,String address) throws IOException {
             Socket socket = new Socket(PROXY_HOST, PROXY_PORT);
+            boolean sent = false;
             try {        	
             	BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             	PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
@@ -74,11 +75,12 @@ public class Servidor {
             	String response;
             	out.println(header);
             	out.println(body);
-            	while ((response = in.readLine()) != null) {
+            	while ((response = in.readLine()) != null && !sent) {
             		System.out.println(response);
-            		if(response.equals("RESPUESTA:ACK")) {
-//            			System.out.println("Conectado al Proxy en " + PROXY_HOST + ":" + PROXY_PORT);
-//            			System.out.println("mensaje enviado");
+            		if(response.equals("ACK")) {
+            			sent = true;
+            			System.out.println("Conectado al Proxy en " + PROXY_HOST + ":" + PROXY_PORT);
+            			System.out.println("mensaje enviado");
             		}else {
 //            			System.out.println("No se ha podido registrar el servidor en el proxy");
             			socket.close();
@@ -88,6 +90,7 @@ public class Servidor {
             	System.out.println(e);
             	socket.close();
             }
+            socket.close();
         }
 
 		private void entregarMensajesPendientes(List<Request> mPendientes) throws IOException {
@@ -117,6 +120,7 @@ public class Servidor {
                     // header: "OPERACION:xxx;USER:yyy"
                     String payload = in.readLine();      // JSON del Request
                     Request req   = JsonConverter.fromJson(payload);
+                    System.out.println(payload);
                     ServerSystem sys = ServerSystem.getInstance();
                     
                     if(req == null) {
@@ -138,7 +142,7 @@ public class Servidor {
                     	String response;
                     	switch (req.getOperacion()) {
                     	case "registro":
-                    		response = sys.registrarUsuario(req,header);
+                    		Request reg = sys.registrarUsuario(req,header);
                     		out.println("ACK");
                     		out.println(response);
                     		
@@ -147,6 +151,7 @@ public class Servidor {
                             	if (mPendientes != null) 
                             		entregarMensajesPendientes(mPendientes);
                             }
+                    		out.println(JsonConverter.toJson(reg));
                     		break;
                     	case "consulta":
                     		Request resp = sys.manejarConsulta(req);
@@ -159,8 +164,14 @@ public class Servidor {
                     			enviarMensaje(r,r.getReceptor().getAddress());
                     		else
                     			sys.almacenarMensaje(req);
+                    		Request r = sys.createResponse("Respuesta", "respuesta");
                     		out.println("ACK");
-                    		out.println("enviado");
+                    		out.println(JsonConverter.toJson(r));
+                    		Request resend = sys.manejarMensaje(req);
+                    		if(resend != null) {                    			
+                    			enviarMensaje(resend,resend.getReceptor().getAddress());
+                    			out.println("ACK");
+                    		}
                     		break;
                     	case "heartbeat":
                     		sys.actualizarHeartbeat(req);
@@ -177,9 +188,9 @@ public class Servidor {
             } finally {
                 try {
                     socket.close();
-/*                    System.out.println("[ClientHandler] Conexión cerrada con " +
-                        socket.getInetAddress().getHostAddress() + ":" + socket.getPort());
-*/                } catch (IOException ex) {
+                 //   System.out.println("[ClientHandler] Conexión cerrada con " +
+                 //       socket.getInetAddress().getHostAddress() + ":" + socket.getPort());
+                } catch (IOException ex) {
                     ex.printStackTrace();
                 }
             }
