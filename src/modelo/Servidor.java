@@ -36,7 +36,9 @@ public class Servidor {
         try {        	
         	BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         	PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-        	String header = "OPERACION:REGISTER;IP:127.0.0.1;PUERTO:5000";
+        	String header = "OPERACION:REGISTER;IP:127.0.0.1;PUERTO:";
+        	String puertoString = String.valueOf(this.puerto);
+        	header += puertoString;
         	String response;
         	out.println(header);
         	while ((response = in.readLine()) != null) {
@@ -87,11 +89,11 @@ public class Servidor {
                 while ((response = in.readLine()) != null) {
                     System.out.println(response);
                     if (response.equals("ACK")) {
-                        System.out.println("Conectado al Proxy en " + PROXY_HOST + ":" + PROXY_PORT);
-                        System.out.println("mensaje enviado");
+//                        System.out.println("Conectado al Proxy en " + PROXY_HOST + ":" + PROXY_PORT);
+//                        System.out.println("mensaje enviado");
                         return; // éxito, salgo del método
                     } else {
-                        System.out.println("No se ha podido registrar el servidor en el proxy");
+//                        System.out.println("No se ha podido registrar el servidor en el proxy");
                         break; // rompo el bucle, salgo limpio
                     }
                 }
@@ -172,8 +174,6 @@ public class Servidor {
             } finally {
                 try {
                     socket.close();
-                 //   System.out.println("[ClientHandler] Conexión cerrada con " +
-                 //       socket.getInetAddress().getHostAddress() + ":" + socket.getPort());
                 } catch (IOException ex) {
                     ex.printStackTrace();
                 }
@@ -190,14 +190,11 @@ public class Servidor {
 		List<Request> mensajesPendientes = sys.entregarPendientes(nombre);
 		
 		Iterator<Request> it = mensajesPendientes.iterator();
-		
-		System.out.println("Empiezo a enviar almacenados(" + mensajesPendientes.size() + ")");
 
 		while(it.hasNext()) {
 		    Request mp = it.next();
 		    try {
 		        enviarMensaje(mp, address);
-		        System.out.println("Almacenado y enviado: " + mp.toString());
 		    } catch (IOException e) {
 		        System.out.println("El usuario se desconecto en medio del envío de sus mensajes pendientes");
 		        // Reencolo el mensaje fallido y los demás
