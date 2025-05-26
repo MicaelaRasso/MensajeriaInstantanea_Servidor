@@ -9,11 +9,13 @@ import java.net.Socket;
 import java.util.Iterator;
 import java.util.List;
 
+import util.ConfigLoader;
+
 public class Servidor {
     private final int puerto;
     private ServerSocket serverSocket;
-    private static final String PROXY_HOST = "127.0.0.1";
-    private static final int PROXY_PORT = 60000;
+    private static final String PROXY_HOST = ConfigLoader.pHost;
+    private static final int PROXY_PORT = ConfigLoader.pPort;
 
     public Servidor(int puerto) {
         this.puerto = puerto;
@@ -211,8 +213,8 @@ public class Servidor {
 	}
    }
     public static void main(String[] args) throws IOException {
-    	 
-		Servidor s = new Servidor(5000);
+    	int puerto = ConfigLoader.sPort;
+		Servidor s = new Servidor(puerto);
 		s.registrarServidor();
         System.out.println("[SERVIDOR] Arrancando servidor en puerto " + s.puerto);
     }
