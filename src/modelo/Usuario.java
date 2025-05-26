@@ -27,7 +27,7 @@ public class Usuario {
         return address;
     }
 
-    public void setIP(String IP) {
+    public void setAddress(String address) {
         this.address = address;
     }
 

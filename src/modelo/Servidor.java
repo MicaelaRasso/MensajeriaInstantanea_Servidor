@@ -1,7 +1,13 @@
 package modelo;
 
-import java.io.*;
-import java.net.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.Iterator;
+import java.util.List;
 
 public class Servidor {
     private final int puerto;
@@ -63,33 +69,33 @@ public class Servidor {
             this.socket = socket;
         }
         
-        private void enviarMensaje(Request req,String address) throws IOException {
-            Socket socket = new Socket(PROXY_HOST, PROXY_PORT);
-            boolean sent = false;
-            try {        	
-            	BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            	PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-            	String header = "OPERACION:SEND_MESSAGE;ADDRESS:" + address;
-            	String body = JsonConverter.toJson(req);
-            	String response;
-            	out.println(header);
-            	out.println(body);
-            	while ((response = in.readLine()) != null && !sent) {
-            		System.out.println(response);
-            		if(response.equals("ACK")) {
-            			sent = true;
-            			System.out.println("Conectado al Proxy en " + PROXY_HOST + ":" + PROXY_PORT);
-            			System.out.println("mensaje enviado");
-            		}else {
-            			System.out.println("No se ha podido registrar el servidor en el proxy");
-            			socket.close();
-            		}
-            	}
-            }catch(IOException e) {
-            	System.out.println(e);
-            	socket.close();
+        private void enviarMensaje(Request req, String address) throws IOException {
+            try (
+                Socket socket = new Socket(PROXY_HOST, PROXY_PORT);
+                BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                PrintWriter out = new PrintWriter(socket.getOutputStream(), true)
+            ) {
+                String header = "OPERACION:SEND_MESSAGE;ADDRESS:" + address;
+                String body = JsonConverter.toJson(req);
+                
+                out.println(header);
+                out.println(body);
+
+                String response;
+                while ((response = in.readLine()) != null) {
+                    System.out.println(response);
+                    if (response.equals("ACK")) {
+                        System.out.println("Conectado al Proxy en " + PROXY_HOST + ":" + PROXY_PORT);
+                        System.out.println("mensaje enviado");
+                        return; // éxito, salgo del método
+                    } else {
+                        System.out.println("No se ha podido registrar el servidor en el proxy");
+                        break; // rompo el bucle, salgo limpio
+                    }
+                }
+
+                throw new IOException("No se recibió ACK del servidor");
             }
-            socket.close();
         }
 
         @Override
@@ -110,7 +116,7 @@ public class Servidor {
                     if(req == null) {
                     	if(sys.parseField(header,"OPERACION").equals("DISCONNECT")) {
                     		String address = sys.parseField(header,"ADDRESS");
-                    		System.out.println("desconectando usuario");
+                    		//System.out.println("desconectando usuario");
                     		if(!address.equals("")) {                    			
                     			for (Usuario usuario : sys.getUsuarios().values()) {
                     			    if(usuario.getAddress().equals(address)) {
@@ -123,12 +129,14 @@ public class Servidor {
                     	out.println("ACK");
                     	out.println("Desconexion confirmada");
                     }else {                    	
-                    	String response;
                     	switch (req.getOperacion()) {
                     	case "registro":
                     		Request reg = sys.registrarUsuario(req,header);
                     		out.println("ACK");
                     		out.println(JsonConverter.toJson(reg));
+                    		
+                    		enviarPendientes(req);
+
                     		break;
                     	case "consulta":
                     		Request resp = sys.manejarConsulta(req);
@@ -143,6 +151,8 @@ public class Servidor {
                     		if(resend != null) {                    			
                     			enviarMensaje(resend,resend.getReceptor().getAddress());
                     			out.println("ACK");
+                    		}else {
+                    			sys.almacenarMensaje(req);
                     		}
                     		break;
                     	case "heartbeat":
@@ -167,11 +177,41 @@ public class Servidor {
                 }
             }
         }
-    }
-    
-    
+
+	private void enviarPendientes(Request req) {
+		ServerSystem sys = ServerSystem.getInstance();
+		Usuario uReconectado = req.getEmisor();
+		String nombre = uReconectado.getNombre();
+		Usuario uEnSistema = sys.getUsuarios().get(nombre);
+		String address = uEnSistema.getAddress();
+
+		List<Request> mensajesPendientes = sys.entregarPendientes(nombre);
+		
+		Iterator<Request> it = mensajesPendientes.iterator();
+		
+		System.out.println("Empiezo a enviar almacenados(" + mensajesPendientes.size() + ")");
+
+		while(it.hasNext()) {
+		    Request mp = it.next();
+		    try {
+		        enviarMensaje(mp, address);
+		        System.out.println("Almacenado y enviado: " + mp.toString());
+		    } catch (IOException e) {
+		        System.out.println("El usuario se desconecto en medio del envío de sus mensajes pendientes");
+		        // Reencolo el mensaje fallido y los demás
+		        sys.almacenarMensaje(mp); // el actual
+		        while(it.hasNext()) {
+		            sys.almacenarMensaje(it.next());
+		        }
+		        break; // salgo del while, no sigo enviando
+		    }
+		}
+
+		
+	}
+   }
     public static void main(String[] args) throws IOException {
- 
+    	 
 		Servidor s = new Servidor(5000);
 		s.registrarServidor();
         System.out.println("[SERVIDOR] Arrancando servidor en puerto " + s.puerto);

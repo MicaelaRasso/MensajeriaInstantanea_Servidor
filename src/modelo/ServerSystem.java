@@ -14,7 +14,7 @@ public class ServerSystem {
     private static final ServerSystem INSTANCE = new ServerSystem();
 
     private final Map<String,Usuario> usuarios  = new ConcurrentHashMap<>();
-    private final Map<String,List<String>> pendings = new ConcurrentHashMap<>();
+    private final Map<String,List<Request>> pendings = new ConcurrentHashMap<>();
     
 
     private ServerSystem() {}
@@ -26,11 +26,13 @@ public class ServerSystem {
     /** Registro de un nuevo usuario */
     public synchronized Request registrarUsuario(Request req,String header) {
         String nombre = req.getEmisor().getNombre();
-        String address     = parseField(header,"ADDRESS");
+        String address = parseField(header,"ADDRESS");
         Usuario usuario = usuarios.get(nombre);
         Request response;
         if(usuario != null && !usuario.isConnected()) {
         	usuario.setConnected(true);
+        	if(usuario.getAddress() != address)
+        		usuario.setAddress(address);
         	System.out.println("[ServerSystem] Usuario reconectado: " + nombre + "@" + address);
         	response = createResponse("Respuesta","registrado");
         }else {
@@ -46,6 +48,10 @@ public class ServerSystem {
         	}
         }
         pendings.putIfAbsent(nombre, new ArrayList<>());
+        //System.out.println(usuarios.toString());
+        //System.out.println(pendings.toString());
+        
+
         return response;
     }
 
@@ -68,19 +74,14 @@ public class ServerSystem {
     /** Almacena un mensaje pendiente */
     public synchronized Request manejarMensaje(Request req) {
         String nombreReceptor = req.getReceptor().getNombre();
-        String texto    = req.getContenido();
+        String texto = req.getContenido();
         Request resend = null;
         //pendings.computeIfAbsent(receptor, k -> new ArrayList<>()).add(texto);
         Usuario receptor = usuarios.get(nombreReceptor);
         System.out.println(receptor.isConnected());
         if(receptor != null) {
         	if(receptor.isConnected()) {
-        		resend = new Request();
-        		resend.setOperacion("mensaje");
-        		resend.setContenido(texto);
-        		resend.setEmisor(req.getEmisor());
-        		resend.setReceptor(receptor);
-        		resend.setFechaYHora(req.getFechaYHora());
+        		resend = createResponse("mensaje", texto, req.getEmisor(), receptor, req.getFechaYHora());
         	}else{        		
         		System.out.println("[ServerSystem] Mensaje para " + nombreReceptor + " almacenado.");
         	}
@@ -89,9 +90,34 @@ public class ServerSystem {
         return resend;
     }
 
+
+	public void almacenarMensaje(Request req) {
+        
+		Usuario receptor = req.getReceptor();
+        Request resend = null;
+  		resend = createResponse("mensaje", req.getContenido(), req.getEmisor(), receptor, req.getFechaYHora());
+		if(!receptor.isConnected()) {
+			System.out.println(receptor.getNombre() + " debe almacenar mensajes");
+
+	        
+	        System.out.println();
+	        System.out.println(pendings.toString());
+	        System.out.println();
+			pendings.get(receptor.getNombre()).add(resend);
+			System.out.println();
+	        System.out.println(pendings.toString());
+	        System.out.println();
+			
+	
+		}
+			
+	}
+    
     /** Devuelve y limpia la lista de pendientes de un usuario */
-    public synchronized List<String> entregarPendientes(String usuario) {
-        return pendings.remove(usuario);
+    public synchronized List<Request> entregarPendientes(String usuario) {
+	    List<Request> mensajes = new ArrayList<>(pendings.get(usuario));
+	    pendings.get(usuario).clear();
+	    return mensajes;
     }
 
     /** Actualiza el timestamp de un heartbeat (solo logging) */
@@ -135,5 +161,4 @@ public class ServerSystem {
 	public Map<String, Usuario> getUsuarios() {
 		return usuarios;
 	}
-    
 }
